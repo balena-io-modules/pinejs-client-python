@@ -240,7 +240,14 @@ def add_parent_key(
             else:
                 filter = f"({''.join(filter)})"
         else:
-            filter = f"{filter}"
+            if filter is None:
+                filter_python_converted = "null"
+            elif isinstance(filter, bool):
+                filter_python_converted = "true" if filter else "false"
+            else:
+                filter_python_converted = filter
+
+            filter = f"{filter_python_converted}"
         return [escape_resource(parent_key), operator, filter]
     if isinstance(filter, list):
         return filter
@@ -345,12 +352,12 @@ def handle_expand_object(expand: ResourceExpand) -> List[str]:
             )
         if isinstance(value, list):
             raise Exception(
-                f"'$expand: {key}: [...]' is invalid, use '$expand: {key}: {...}' instead."
+                f"'$expand: {key}: [...]' is invalid, use '$expand: {key}: {{...}}' instead."
             )
         if key.endswith("/$count"):
             raise Exception(
-                "'`$expand: { 'a/$count': {...} }` is deprecated, please use\
-                            `$expand: { a: { $count: {...} } }` instead."
+                "'`$expand: { 'a/$count': {...} }` is deprecated, please use"
+                "`$expand: { a: { $count: {...} } }` instead."
             )
         return handle_options("$expand", value, key)
 
@@ -379,8 +386,8 @@ def build_order_by(orderby: OrderBy) -> str:
     if isinstance(orderby, str):
         if re.search(r"/\$count\b", orderby):
             raise Exception(
-                "'`$orderby: 'a/$count'` is deprecated, please use `$orderby: { a: { $count: {...} } }`\
-                            instead."
+                "'`$orderby: 'a/$count'` is deprecated, please use `$orderby: { a: { $count: {...} } }`"
+                "instead."
             )
         return orderby
     elif isinstance(orderby, list):
@@ -389,10 +396,14 @@ def build_order_by(orderby: OrderBy) -> str:
         result = map(__build_order_by, orderby)
         return join(list(result))
     elif isinstance(orderby, dict):  # type: ignore
-        dollar_dir = orderby["$dir"]
-        dollar_orderby = {
-            k: orderby[k] for k in set(list(orderby.keys())) - set("$dir")
-        }
+        print("order by dict")
+        dollar_dir = orderby.get("$dir")
+
+        remaining_keys = set(list(orderby.keys()))
+        remaining_keys.discard("$dir")
+        dollar_orderby = {k: orderby[k] for k in remaining_keys}
+
+        print(dollar_orderby)
 
         def __map_dollar_orderby(dir_or_options: Any, key: str) -> str:
             property_path = key
@@ -403,24 +414,24 @@ def build_order_by(orderby: OrderBy) -> str:
                 keys = dir_or_options.keys()
                 if "$count" not in dir_or_options or len(keys) > 1:
                     raise Exception(
-                        f"When using {ODataOptionCodeExampleMap['$orderby']} you can only specify $count,\
-                                    got {keys}"
+                        f"When using {ODataOptionCodeExampleMap['$orderby']} you can only specify $count, "
+                        f"got {list(keys)}"
                     )
                 property_path = handle_options(
                     "$orderby", dir_or_options, property_path
                 )
             if dir is None:  # type: ignore
                 raise Exception(
-                    "'$orderby' objects should either use the '{ a: 'asc' }' or the\
-                                '$orderby: { a: { $count: ... }, $dir: 'asc' }' notation"
+                    "'$orderby' objects should either use the '{ a: 'asc' }' or the"
+                    "'$orderby: { a: { $count: ... }, $dir: 'asc' }' notation"
                 )
             if dir != "asc" and dir != "desc":
-                raise Exception("$orderby' direction must be 'asc' or 'desc'")
+                raise Exception("'$orderby' direction must be 'asc' or 'desc'")
             return f"{property_path} {dir}"
 
         result = map_obj(dollar_orderby, __map_dollar_orderby)
 
-        if len(result) == 1:
+        if len(result) != 1:
             raise Exception(
                 f"'$orderby' objects must have exactly one element, got {len(result)} elements"
             )
@@ -459,12 +470,19 @@ def build_option(option: str, value: Any) -> str:
                     f"Unknown type for parameter alias option '{option}': {type(value)}"
                 )
             compiled_value = str(escape_value(value))
+
         elif isinstance(value, list):
             compiled_value = join(value)  # type: ignore
         elif isinstance(value, str):
+            print("str")
             compiled_value = value
-        elif isinstance(value, (int, float, bool)):
+        elif isinstance(value, bool):
+            print("bool")
+            compiled_value = "true" if value else "false"
+        elif isinstance(value, (int, float)):
+            print("float/int")
             compiled_value = str(value)
+
         else:
             raise Exception(f"Unknown type for option {type(value)}")
 
@@ -480,8 +498,8 @@ def handle_options(
         keys = options.keys()
         if len(keys) > 1:
             raise Exception(
-                f"When using {ODataOptionCodeExampleMap[option_operation]} \
-                you can only specify $count, got: {keys}"
+                f"When using {ODataOptionCodeExampleMap[option_operation]}"
+                f"you can only specify $count, got: {keys}"
             )
         options = options["$count"]
         parent_key += "/$count"
@@ -490,13 +508,13 @@ def handle_options(
         if len(options.keys()) > count_filter:
             if option_operation == "$expand":
                 raise Exception(
-                    "using OData options other than $filter in a '$expand: { a: { $count: {...} } }'\
-                                is not allowed, please remove them."
+                    "using OData options other than $filter in a '$expand: { a: { $count: {...} } }' "
+                    "is not allowed, please remove them."
                 )
             else:
                 raise Exception(
-                    f"When using {ODataOptionCodeExampleMap[option_operation]}\
-                                you can only specify $filter in the $count, got {options.keys()}"
+                    f"When using {ODataOptionCodeExampleMap[option_operation]} "
+                    f"you can only specify $filter in the $count, got {list(options.keys())}"
                 )
 
     def __parse_options(value: Any, key: str) -> str:
@@ -506,8 +524,8 @@ def handle_options(
             return build_option(key, value)
         if option_operation == "$expand":
             raise Exception(
-                f"'$expand: {parent_key}: ${key}: ...' is invalid, use '$expand: {parent_key}: $expand: \
-                            {key}: ...' instead."
+                f"'$expand: {parent_key}: ${key}: ...' is invalid, use '$expand: {parent_key}: $expand:"
+                f"{key}: ...' instead."
             )
 
         raise Exception(
@@ -596,8 +614,8 @@ def handle_filter_operator(
                 filter_str = filter["$string"]  # type: ignore
                 if not isinstance(filter_str, str):
                     raise Exception(
-                        f"$string element of object for {operator} must be a string got: \
-                        {type(filter_str)}"  # type: ignore
+                        f"$string element of object for {operator} must be a string got: "
+                        f"{type(filter_str)}"  # type: ignore
                     )
                 mapped_params: Dict[str, Filter] = {}
                 for index in filter.keys():
@@ -694,11 +712,11 @@ def handle_filter_object(
         else:
             keys = [key]
             if parent_key is not None:
-                if len(parent_key) > 0:
-                    raise Exception(
-                        "`$filter: a: b: ...` is deprecated, please use `$filter: a: $any: { $alias: 'x', \
-                                    $expr: x: b: ... }` instead."
-                    )
+                # if len(parent_key) > 0:
+                #     raise Exception(
+                #         "`$filter: a: b: ...` is deprecated, please use `$filter: a: $any: { $alias: 'x', \
+                #                     $expr: x: b: ... }` instead."
+                #     )
                 keys = parent_key + keys
             return build_filter(value, keys)  # type: ignore
 
@@ -771,6 +789,7 @@ class PinejsClientCore:
             options = options.get("$count")
 
         id = params.get("id")
+
         if id is not None:
             if isinstance(id, dict) and not isinstance(id, datetime):
                 if "@" in id.keys():

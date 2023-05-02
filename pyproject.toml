@@ -7,10 +7,10 @@ readme = "README.md"
 packages = [{include = "pine_client"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8.1"
 
 [tool.poetry.dev-dependencies]
-black = {version = "*", python = ">=3.8.0"}
+black = {version = "*", python = "^3.8.1"}
 flake8 = "*"
 pytest = "*"
 

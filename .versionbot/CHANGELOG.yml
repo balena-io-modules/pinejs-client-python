@@ -1,0 +1,17 @@
+- commits:
+    - subject: Adds tests and matches current nodejs status
+      hash: 0b25c3cf9c0282f40aa744800a473d525728fb49
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Otávio Jacobi
+    - subject: first commit
+      hash: 5f43732a087c40dadd4ec929a9242ad2ba016b50
+      body: ""
+      footer:
+        change-type: patch
+      author: Otávio Jacobi
+  version: 0.0.2
+  title: ""
+  date: 2023-05-02T22:55:47.600Z

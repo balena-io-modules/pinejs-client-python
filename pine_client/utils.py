@@ -33,12 +33,22 @@ def escape_parameter_alias(value: Any) -> str:
     return f"@{encode_uri_component(value)}"
 
 
+def iso_format(dt: datetime):
+    try:
+        utc: Any = dt + dt.utcoffset()  # type: ignore
+    except TypeError:
+        utc: Any = dt
+
+    isostring = datetime.strftime(utc, "%Y-%m-%dT%H:%M:%S.{0}Z")
+    return isostring.format(int(round(utc.microsecond / 1000.0)))
+
+
 def escape_value(value: Any) -> Union[str, int, float, bool, None]:
     if isinstance(value, str):
         value = value.replace("'", "''")
         return f"'{encode_uri_component(value)}'"
     elif isinstance(value, datetime):
-        return f"datetime'{value.isoformat()}'"
+        return f"datetime'{iso_format(value)}'"
     return value
 
 

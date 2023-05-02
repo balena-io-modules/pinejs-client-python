@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pine-client"
+version = "0.1.0"
+description = ""
+authors = ["Balena <info@balena.io>"]
+readme = "README.md"
+packages = [{include = "pine_client"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+black = {version = "*", python = ">=3.8.0"}
+flake8 = "*"
+pytest = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

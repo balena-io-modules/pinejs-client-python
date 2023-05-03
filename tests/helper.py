@@ -1,7 +1,7 @@
 from pine_client import PinejsClientCore
 from typing import Any
 
-pine = PinejsClientCore("balena")
+pine = PinejsClientCore("balena-test")
 
 
 def assert_compile(input: Any, output: str):

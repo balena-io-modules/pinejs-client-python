@@ -269,7 +269,6 @@ def filter_operation(
     operator: FilterOperationKey,
     parent_key: Optional[List[str]] = None,
 ) -> List[str]:
-    print("filter operation", filter, operator, parent_key)
     op = " " + operator[1:] + " "
     if is_primitive(filter):
         filter_str = escape_value(filter)
@@ -304,7 +303,6 @@ def filter_function(
         if parent_key is not None:
             operands.append(escape_resource(parent_key))
         operands.append(escape_value(filter))
-        print("operands", operands)
         return [f"{fn_name}({','.join([o for o in operands if o is not None])})"]
     elif isinstance(filter, list):
         filter_arr = handle_filter_array(filter)
@@ -396,14 +394,11 @@ def build_order_by(orderby: OrderBy) -> str:
         result = map(__build_order_by, orderby)
         return join(list(result))
     elif isinstance(orderby, dict):  # type: ignore
-        print("order by dict")
         dollar_dir = orderby.get("$dir")
 
         remaining_keys = set(list(orderby.keys()))
         remaining_keys.discard("$dir")
         dollar_orderby = {k: orderby[k] for k in remaining_keys}
-
-        print(dollar_orderby)
 
         def __map_dollar_orderby(dir_or_options: Any, key: str) -> str:
             property_path = key
@@ -474,13 +469,10 @@ def build_option(option: str, value: Any) -> str:
         elif isinstance(value, list):
             compiled_value = join(value)  # type: ignore
         elif isinstance(value, str):
-            print("str")
             compiled_value = value
         elif isinstance(value, bool):
-            print("bool")
             compiled_value = "true" if value else "false"
         elif isinstance(value, (int, float)):
-            print("float/int")
             compiled_value = str(value)
 
         else:
@@ -633,7 +625,6 @@ def handle_filter_operator(
 
     elif operator == "$":
         resource = escape_resource(filter)  # type: ignore
-        print("the parent", parent_key)
         return add_parent_key(resource, parent_key)
     elif operator == "$count":
         keys = ["$count"]
@@ -702,9 +693,7 @@ def handle_filter_object(
         value: Union[Filter, Lambda, None], key: str
     ) -> List[str]:
         # TODO: check None vs null+undefined here
-        print("value is", value, "key is", key, "parent_key", parent_key)
         if key[0] == "$":
-            print("no if", value, key, parent_key)
             return handle_filter_operator(value, key, parent_key)  # type: ignore
         elif key[0] == "@":
             parameter_alias = escape_parameter_alias(value)
@@ -729,19 +718,14 @@ def build_filter(
     join_str: Optional[str] = None,
 ) -> List[str]:
     if is_primitive(filter):
-        print("is primitive")
         filter_str = escape_value(filter)
-        print(f"filtered str {filter_str}")
         return add_parent_key(filter_str, parent_key)
     elif isinstance(filter, list):
-        print("is array")
         filter_arr = handle_filter_array(filter)
         filter_str = bracket_join(filter_arr, " or " if join_str is None else join_str)
         return add_parent_key(filter_str, parent_key)
     elif isinstance(filter, dict):
-        print("is dict")
         filter_arr = handle_filter_object(filter, parent_key)
-        print(filter_arr)
         return bracket_join(filter_arr, " and " if join_str is None else join_str)
     else:
         raise Exception(f"Expected None/str/int/float/dict/list, got: {type(filter)}")
@@ -825,5 +809,4 @@ class PinejsClientCore:
     def __validate_and_build_option(value: OptionTypes, key: str) -> str:
         if key[0] == "$" and not is_valid_option(key):
             raise Exception(f"Unknown key option '{key}'")
-        print(f"will build {key}, {value}")
         return build_option(key, value)

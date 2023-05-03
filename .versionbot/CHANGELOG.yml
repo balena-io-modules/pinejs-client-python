@@ -1,4 +1,16 @@
 - commits:
+    - subject: Removes unnecessary prints
+      hash: 5e57ab2a44644b5e327d098789990250c0061f70
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Otávio Jacobi
+      nested: []
+  version: 0.0.3
+  title: ""
+  date: 2023-05-03T10:19:59.735Z
+- commits:
     - subject: Adds tests and matches current nodejs status
       hash: 0b25c3cf9c0282f40aa744800a473d525728fb49
       body: ""

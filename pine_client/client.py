@@ -1,6 +1,9 @@
-from typing import Any, Dict, Union, Literal, TypedDict, Optional, cast, List
+from typing import Any, Dict, Union, Literal, TypedDict, Optional, cast, List, Callable
+from typing_extensions import NotRequired
 from datetime import datetime
 import re
+
+from abc import ABC, abstractmethod
 
 from .utils import (
     escape_resource,
@@ -222,6 +225,28 @@ class Params(TypedDict, total=False):
     passthrough: AnyObject
     passthrough_by_method: Dict[ODataMethod, AnyObject]
     options: ODataOptions
+
+
+class GetOrCreateParams(TypedDict):
+    api_prefix: NotRequired[str]
+    resource: str
+    id: ResourceAlternateKey
+    url: NotRequired[str]
+    body: AnyObject
+    passthrough: NotRequired[AnyObject]
+    passthrough_by_method: NotRequired[Dict[ODataMethod, AnyObject]]
+    options: NotRequired[ODataOptions]
+
+
+class UpsertParams(TypedDict):
+    api_prefix: NotRequired[str]
+    resource: str
+    id: Dict[str, Primitive]
+    url: NotRequired[str]
+    body: AnyObject
+    passthrough: NotRequired[AnyObject]
+    passthrough_by_method: NotRequired[Dict[ODataMethod, AnyObject]]
+    options: NotRequired[ODataOptions]
 
 
 def is_primitive(obj: Any) -> bool:
@@ -731,7 +756,7 @@ def build_filter(
         raise Exception(f"Expected None/str/int/float/dict/list, got: {type(filter)}")
 
 
-class PinejsClientCore:
+class PinejsClientCore(ABC):
     def __init__(self, params: Union[str, Params]):
         params_to_set: Params = {}
         if isinstance(params, str):
@@ -744,10 +769,129 @@ class PinejsClientCore:
         self.passthrough_by_method = params_to_set.get("passthrough_by_method", {})
         self.backend_params: Optional[AnyObject] = None
 
+    def transform_get_result(self, params: Params) -> Callable[[Any], Any]:
+        singular = False if params.get("id") is None else True
+
+        def transform_get_result_fn(data: AnyObject) -> Any:
+            if not isinstance(data, dict):  # type: ignore
+                raise Exception(f"Response was not a JSON object: '{type(data)}'")
+            data_d = data.get("d")
+            if data_d is None:
+                raise Exception(
+                    "Invalid response received, the 'd' property is missing."
+                )
+            if singular:
+                if len(data_d) > 1:
+                    raise Exception(
+                        "Returned multiple results when only one was expected."
+                    )
+                return data_d[0]
+            return data_d
+
+        return transform_get_result_fn
+
+    def get(self, params: Params) -> Any:
+        result = self.request({**params, "method": "GET"})
+        return self.transform_get_result(params)(result)
+
+    def put(self, params: Params) -> Any:
+        return self.request({**params, "method": "PUT"})
+
+    def patch(self, params: Params) -> Any:
+        return self.request({**params, "method": "PATCH"})
+
+    def post(self, params: Params) -> Any:
+        return self.request({**params, "method": "POST"})
+
+    def delete(self, params: Params) -> Any:
+        return self.request({**params, "method": "DELETE"})
+
+    def get_or_create(self, params: GetOrCreateParams) -> Any:
+        id = params["id"]
+        body = params["body"]
+
+        if params["resource"].endswith("/$count"):
+            raise Exception("getOrCreate does not support $count on resources")
+
+        if body is None:  # type: ignore
+            raise Exception("The body property is missing")
+
+        if not isinstance(id, dict):  # type: ignore
+            raise Exception(
+                "The id property must be an object with the natural key of the model"
+            )
+
+        remaining_keys = set(list(params.keys()))
+        remaining_keys.discard("id")
+        remaining_keys.discard("body")
+        remaining_params: Params = {k: params[k] for k in remaining_keys}  # type: ignore
+
+        result = self.get({**remaining_params, "id": id})
+
+        if result is not None:
+            return result
+
+        return self.post({**remaining_params, "body": {**id, **body}})
+
+    def upsert(self, params: UpsertParams) -> Any:
+        id = params["id"]
+        body = params["body"]
+
+        if not isinstance(id, dict):  # type: ignore
+            raise Exception("The id property must be an object")
+
+        natural_key_props = id.keys()
+        if len(natural_key_props) == 0:
+            raise Exception(
+                "The id property must be an object with the natural key of the model"
+            )
+
+        if body is None:  # type: ignore
+            raise Exception("The body property is missing")
+
+        remaining_keys = set(list(params.keys()))
+        remaining_keys.discard("id")
+        remaining_keys.discard("body")
+        remaining_params: Params = {k: params[k] for k in remaining_keys}  # type: ignore
+
+        post_params: Params = {**remaining_params, "body": {**id, **body}}
+
+        try:
+            return self.post(post_params)
+        except Exception as e:
+            is_unique_violation_response = False
+            if re.search(r"unique", e.body, re.IGNORECASE):  # type: ignore
+                if e.status_code == 409:  # type: ignore
+                    is_unique_violation_response = True
+
+            if not is_unique_violation_response:
+                raise e
+
+            options = remaining_params.get("options", {})
+            dollar_filter = (
+                id
+                if options.get("$filter") is None
+                else {"$and": [options["$filter"], id]}
+            )
+
+            patch_parameters: Params = {
+                **remaining_params,
+                "options": {**options, "$filter": dollar_filter},
+                "body": body,
+            }
+
+            return self.patch(patch_parameters)
+
     def request(self, params: Params) -> Any:
+        # TODO: actually passthrought the passthrought stuff
         api_prefix = params.get("api_prefix", self.api_prefix)
         url = api_prefix + self.compile(params)
-        print(url)
+        method = params.get("method", "GET").upper()
+        return self._request(method=method, url=url, body=params.get("body"))
+
+    @abstractmethod
+    def _request(self, method: str, url: str, body: Optional[Any] = None) -> Any:
+        pass
 
     def compile(self, params: Params) -> str:
         url = params.get("url")

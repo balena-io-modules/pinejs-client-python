@@ -1,4 +1,16 @@
 - commits:
+    - subject: Adds pine request methods
+      hash: 00e02bb737a0e4b621bf501cf8ef4f31f252cee9
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Otávio Jacobi
+      nested: []
+  version: 0.1.0
+  title: ""
+  date: 2023-05-05T13:04:50.746Z
+- commits:
     - subject: Removes unnecessary prints
       hash: 5e57ab2a44644b5e327d098789990250c0061f70
       body: ""

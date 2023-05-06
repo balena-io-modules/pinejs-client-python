@@ -1,4 +1,16 @@
 - commits:
+    - subject: Fixes index out of range on transform_get_result
+      hash: b23c789a28bd3fee69ae0f4948b50b4440c9b845
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Otávio Jacobi
+      nested: []
+  version: 0.1.1
+  title: ""
+  date: 2023-05-06T16:02:11.278Z
+- commits:
     - subject: Adds pine request methods
       hash: 00e02bb737a0e4b621bf501cf8ef4f31f252cee9
       body: ""

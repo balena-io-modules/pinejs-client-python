@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pine-client"
-version = "0.1.0"
+version = "0.1.1"
 description = "This module provides the core layer for python interface for the pinejs API"
 authors = ["Balena <info@balena.io>"]
 readme = "README.md"

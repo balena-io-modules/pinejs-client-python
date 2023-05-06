@@ -785,6 +785,10 @@ class PinejsClientCore(ABC):
                     raise Exception(
                         "Returned multiple results when only one was expected."
                     )
+
+                if len(data_d) == 0:
+                    return None
+
                 return data_d[0]
             return data_d
 

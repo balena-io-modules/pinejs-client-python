@@ -1,4 +1,16 @@
 - commits:
+    - subject: Fixes quote on encode_uri_component
+      hash: ab8bb1868b7c3018d0b332d310c3444b89c6ab60
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Otávio Jacobi
+      nested: []
+  version: 0.1.2
+  title: ""
+  date: 2023-05-08T14:56:04.333Z
+- commits:
     - subject: Fixes index out of range on transform_get_result
       hash: b23c789a28bd3fee69ae0f4948b50b4440c9b845
       body: ""

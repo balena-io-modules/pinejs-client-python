@@ -1,11 +1,11 @@
-from urllib.parse import quote_plus
+from urllib.parse import quote
 from typing import Any, List, Union
 from datetime import datetime
 import re
 
 
 def encode_uri_component(v: str) -> str:
-    return quote_plus(v, safe="~()*!'")
+    return quote(v, safe="~()*!'")
 
 
 encoded_slash = encode_uri_component("/")

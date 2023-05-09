@@ -864,7 +864,7 @@ class PinejsClientCore(ABC):
             return self.post(post_params)
         except Exception as e:
             is_unique_violation_response = False
-            if re.search(r"unique", e.body, re.IGNORECASE):  # type: ignore
+            if re.search(r"unique", e.message, re.IGNORECASE):  # type: ignore
                 if e.status_code == 409:  # type: ignore
                     is_unique_violation_response = True
 

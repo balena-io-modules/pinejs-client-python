@@ -81,6 +81,68 @@ def test_operators():
             f"a {operator} ({raw_date_time})",
         )
 
+        with pytest.raises(Exception) as err:
+            filter_test({"a": create_filter({"$duration": "P6D"})}, "")
+        assert "Expected type for $duration, got: <class 'str'>" in str(err)
+
+        filter_test(
+            {
+                "a": create_filter(
+                    {
+                        "$duration": {
+                            "negative": True,
+                            "days": 6,
+                            "hours": 23,
+                            "minutes": 59,
+                            "seconds": 59.9999,
+                        }
+                    }
+                )
+            },
+            f"a {operator} duration'-P6DT23H59M59.9999S'",
+        )
+
+        filter_test(
+            {"a": create_filter({"$duration": {"days": 6}})},
+            f"a {operator} duration'P6D'",
+        )
+
+        filter_test(
+            {"a": create_filter({"$duration": {"hours": 23}})},
+            f"a {operator} duration'PT23H'",
+        )
+
+        filter_test(
+            {"a": create_filter({"$duration": {"seconds": 10}})},
+            f"a {operator} duration'PT10S'",
+        )
+
+        filter_test(
+            {"a": create_filter({"$duration": {"minutes": 1}})},
+            f"a {operator} duration'PT1M'",
+        )
+
+        filter_test(
+            {
+                "a": create_filter(
+                    {
+                        "$sub": [
+                            {"$now": {}},
+                            {
+                                "$duration": {
+                                    "days": 6,
+                                    "hours": 23,
+                                    "minutes": 59,
+                                    "seconds": 59.9999,
+                                },
+                            },
+                        ],
+                    }
+                ),
+            },
+            f"a {operator} (now() sub duration'P6DT23H59M59.9999S')",
+        )
+
         filter_test(
             {"a": create_filter({"$or": [{"$": "b"}, {"$": "c"}]})},
             f"a {operator} (b or c)",

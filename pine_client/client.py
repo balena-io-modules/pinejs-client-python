@@ -37,6 +37,18 @@ RawFilter = str
 
 Lambda = TypedDict("Lambda", {"$alias": str, "$expr": Filter})
 
+DurationValue = TypedDict(
+    "DurationValue",
+    {
+        "negative": bool,
+        "days": float,
+        "hours": float,
+        "minutes": float,
+        "seconds": float,
+    },
+    total=False,
+)
+
 FilterObj = TypedDict(
     "FilterObj",
     {
@@ -82,6 +94,7 @@ FilterObj = TypedDict(
         "$time": FilterFunctionValue,
         "$totaloffsetminutes": FilterFunctionValue,
         "$now": FilterFunctionValue,
+        "$duration": DurationValue,
         "$maxdatetime": FilterFunctionValue,
         "$mindatetime": FilterFunctionValue,
         "$totalseconds": FilterFunctionValue,
@@ -213,6 +226,12 @@ ParameterAlias = Primitive
 ODataOptions = AnyObject
 
 OptionTypes = Union[Filter, Expand, OrderBy, int, str, List[str], ParameterAlias]
+
+duration_timepart_flag_entries = (
+    ("hours", "H"),
+    ("minutes", "M"),
+    ("seconds", "S"),
+)
 
 
 class Params(TypedDict, total=False):
@@ -609,6 +628,37 @@ def handle_filter_operator(
         "$cast",
     ]:
         return filter_function(filter, cast(FilterFunctionKey, operator), parent_key)
+
+    elif operator == "$duration":
+        if not isinstance(filter, dict):
+            raise Exception(f"Expected type for {operator}, got: {type(filter)}")
+
+        duration_value = cast(DurationValue, filter)
+        duration_string = "P"
+
+        days = duration_value.get("days")
+        if days is not None:
+            duration_string += f"{days}D"
+
+        time_part = ""
+        for part_key, part_flag in duration_timepart_flag_entries:
+            key = duration_value.get(part_key)
+            if key is not None:
+                time_part += f"{key}{part_flag}"
+
+        if len(time_part) > 0:
+            duration_string += f"T{time_part}"
+
+        if len(duration_string) <= 1:
+            raise Exception(
+                f"Expected {operator} to include duration properties, got: {type(filter)}"
+            )
+
+        if duration_value.get("negative"):
+            duration_string = f"-{duration_string}"
+
+        return add_parent_key(f"duration'{duration_string}'", parent_key)
+
     elif operator == "$raw":
         if isinstance(filter, str):
             f = f"({filter})"

@@ -1,4 +1,16 @@
 - commits:
+    - subject: Add support for $duration
+      hash: 075921607960dd996fc1b6cbba1be8730b154c98
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Otávio Jacobi
+      nested: []
+  version: 0.2.0
+  title: ""
+  date: 2023-07-18T14:15:29.754Z
+- commits:
     - subject: Fix upsert message parsing
       hash: a9262c10925feb913c57d8ba7a070d5e6f956601
       body: ""

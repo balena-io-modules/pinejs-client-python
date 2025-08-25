@@ -245,6 +245,8 @@ class Params(TypedDict, total=False):
     passthrough_by_method: Dict[ODataMethod, AnyObject]
     options: ODataOptions
 
+class PostParams(Params, total=False):
+    action: str
 
 class GetOrCreateParams(TypedDict):
     api_prefix: NotRequired[str]
@@ -854,7 +856,7 @@ class PinejsClientCore(ABC):
     def patch(self, params: Params) -> Any:
         return self.request({**params, "method": "PATCH"})
 
-    def post(self, params: Params) -> Any:
+    def post(self, params: PostParams) -> Any:
         return self.request({**params, "method": "POST"})
 
     def delete(self, params: Params) -> Any:
@@ -936,7 +938,7 @@ class PinejsClientCore(ABC):
 
             return self.patch(patch_parameters)
 
-    def request(self, params: Params) -> Any:
+    def request(self, params: Union[Params, PostParams]) -> Any:
         # TODO: actually passthrought the passthrought stuff
         api_prefix = params.get("api_prefix", self.api_prefix)
         url = api_prefix + self.compile(params)
@@ -947,7 +949,7 @@ class PinejsClientCore(ABC):
     def _request(self, method: str, url: str, body: Optional[Any] = None) -> Any:
         pass
 
-    def compile(self, params: Params) -> str:
+    def compile(self, params: Union[Params, PostParams]) -> str:
         url = params.get("url")
 
         if url is not None:
@@ -983,6 +985,10 @@ class PinejsClientCore(ABC):
                 value = "" if v is None else str(v)
 
             url += f"({value})"
+
+        action = params.get("action")
+        if action is not None:
+            url += f"/{action}"
 
         query_options: List[str] = []
 
